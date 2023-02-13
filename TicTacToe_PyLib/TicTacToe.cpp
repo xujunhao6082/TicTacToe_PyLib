@@ -34,14 +34,35 @@ tttInit(TicTacToe* self, PyObject* args, PyObject* kwds)
     self->state = 0x0;
     return 0;
 }
+//计数器
+static int
+getCount(TicTacToe* self) {
+    int count = 0, i;
+    for (i = 0; i < 9; i++) {
+        if (GetState(i))
+            count++;
+    }
+    return count;
+}
+//禁止修改count
+static int
+tttSetCount(TicTacToe* self, PyObject* value, void* closure) {
+    PyErr_SetString(PyExc_AttributeError, EXP_SETCOUNT);
+    return -1;
+}
+//获取count
+static PyObject*
+tttGetCount(TicTacToe* self, void* closure) {
+    return Py_BuildValue("i",getCount(self));
+}
 //禁止修改state
 static int
 tttSetState(TicTacToe* self, PyObject* value, void* closure) {
     PyErr_SetString(PyExc_AttributeError, EXP_SETSTATE);
     return -1;
 }
-static PyObject *
 //获取state
+static PyObject *
 tttGetState(TicTacToe* self, void* closure) {
     return Py_BuildValue("((i,i,i),(i,i,i),(i,i,i))",
         GetState(6), GetState(7), GetState(8),
@@ -61,12 +82,8 @@ Check(int* result, TicTacToe* self) {
             return;
         }
     }
-    int count = 0;
-    for (i = 0; i < 9; i++) {
-        if (GetState(i))
-            count++;
-    }
-    *result = (count > 8) ? 0 : -1;
+    
+    *result = (getCount(self) > 8) ? 0 : -1;
     return;
 }
 static PyObject*
@@ -119,6 +136,8 @@ static PyMethodDef tttMethods[] = {
 static PyGetSetDef tttGetsetters[] = {
     {CLASS_STATE_NAME, (getter)tttGetState, (setter)tttSetState,
      CLASS_STATE_DOC, NULL},
+    {CLASS_COUNT_NAME, (getter)tttGetCount, (setter)tttSetCount,
+     CLASS_COUNT_DOC, NULL},
     {NULL}  /* Sentinel */
 };
 //注册类

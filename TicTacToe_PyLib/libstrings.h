@@ -5,6 +5,8 @@
 #define CLASS_DOC "TicTacToe game object"
 #define CLASS_STATE_NAME "state"
 #define CLASS_STATE_DOC "游戏的状态,先行号后列号,该属性只读"
+#define CLASS_COUNT_NAME "count"
+#define CLASS_COUNT_DOC "已用位置计数"
 #define CLASS_NEXT_NAME "next"
 #define CLASS_NEXT_FIRSTARG "first"
 #define CLASS_NEXT_SECONDARG "second"
@@ -13,3 +15,4 @@
 #define EXP_INDEX_OVER "The Index out of range"
 #define EXP_ARGS "Parameter format is not correct"
 #define EXP_SETSTATE "Attribute 'state' is read-only"
+#define EXP_SETCOUNT "Attribute 'count' is read-only"
