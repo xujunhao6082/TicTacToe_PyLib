@@ -2,8 +2,9 @@
 #define PY_SSIZE_T_CLEAN
 #include<Python.h>
 #include "libstrings.h"
-#define SetState(pos,num) self->state=self->state|(num << pos*2)
-#define GetState(pos) ((self->state >> pos*2)%0x4)
+#define SetState(pos,num) self->state=self->state|((num) << (pos)*2)
+#define GetState(pos) ((self->state >> (pos)*2)%0x4)
+#define GetStateR(pos) GetState(pos)-1
 //定义结构体
 typedef struct {
     PyObject_HEAD
@@ -58,10 +59,10 @@ Check(TicTacToe* self) {
         dat[1] = GetState(CheckTable[i][1]);
         dat[2] = GetState(CheckTable[i][2]);
         if ((dat[0] == dat[1]) && (dat[1] == dat[2]) && dat[0]) {
-            return dat[0];
+            return dat[0]-1;
         }
     }
-    return (getCount(self) > 8) ? 0 : -1;
+    return (getCount(self) > 8) ? 3 : -1;
 }
 //禁止修改count
 static int
@@ -84,9 +85,9 @@ tttSetState(TicTacToe* self, PyObject* value, void* closure) {
 static PyObject *
 tttGetState(TicTacToe* self, void* closure) {
     return Py_BuildValue("((i,i,i),(i,i,i),(i,i,i))",
-        GetState(6), GetState(7), GetState(8),
-        GetState(3), GetState(4), GetState(5), 
-        GetState(0), GetState(1), GetState(2));
+        GetStateR(6), GetStateR(7), GetStateR(8),
+        GetStateR(3), GetStateR(4), GetStateR(5),
+        GetStateR(0), GetStateR(1), GetStateR(2));
 }
 //禁止修改final
 static int
