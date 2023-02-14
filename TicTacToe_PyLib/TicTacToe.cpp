@@ -4,7 +4,6 @@
 #include "libstrings.h"
 #define SetState(pos,num) self->state=self->state|(num << pos*2)
 #define GetState(pos) ((self->state >> pos*2)%0x4)
-#define FASTRETURN(re) if (re + 1) { return Py_BuildValue("i", re); }
 //定义结构体
 typedef struct {
     PyObject_HEAD
@@ -34,6 +33,12 @@ tttInit(TicTacToe* self, PyObject* args, PyObject* kwds)
     self->state = 0x0;
     return 0;
 }
+//清理
+static PyObject*
+tttClear(TicTacToe* self, PyObject* args, PyObject* kwds) {
+    self->state = 0x0;
+    return Py_None;
+}
 //计数器
 static int
 getCount(TicTacToe* self) {
@@ -43,6 +48,20 @@ getCount(TicTacToe* self) {
             count++;
     }
     return count;
+}
+static int CheckTable[8][3] = { {0,1,2},{3,4,5},{6,7,8},{0,3,6},{1,4,7},{2,5,8},{0,4,8},{2,4,6} };
+static int
+Check(TicTacToe* self) {
+    int i, dat[3];
+    for (i = 0; i < 8; i++) {
+        dat[0] = GetState(CheckTable[i][0]);
+        dat[1] = GetState(CheckTable[i][1]);
+        dat[2] = GetState(CheckTable[i][2]);
+        if ((dat[0] == dat[1]) && (dat[1] == dat[2]) && dat[0]) {
+            return dat[0];
+        }
+    }
+    return (getCount(self) > 8) ? 0 : -1;
 }
 //禁止修改count
 static int
@@ -69,54 +88,41 @@ tttGetState(TicTacToe* self, void* closure) {
         GetState(3), GetState(4), GetState(5), 
         GetState(0), GetState(1), GetState(2));
 }
-static int CheckTable[8][3] = { {0,1,2},{3,4,5},{6,7,8},{0,3,6},{1,4,7},{2,5,8},{0,4,8},{2,4,6} };
-static void
-Check(int* result, TicTacToe* self) {
-    int i, dat[3];
-    for (i = 0; i < 8; i++) {
-        dat[0] = GetState(CheckTable[i][0]);
-        dat[1] = GetState(CheckTable[i][1]);
-        dat[2] = GetState(CheckTable[i][2]);
-        if ((dat[0] == dat[1]) && (dat[1] == dat[2]) && dat[0]) {
-            *result = dat[0];
-            return;
-        }
-    }
-    
-    *result = (getCount(self) > 8) ? 0 : -1;
-    return;
+//禁止修改final
+static int
+tttSetFinal(TicTacToe* self, PyObject* value, void* closure) {
+    PyErr_SetString(PyExc_AttributeError, EXP_SETFINAL);
+    return -1;
+}
+//获取final
+static PyObject*
+tttGetFinal(TicTacToe* self, void* closure) {
+    return Py_BuildValue("i",Check(self));
 }
 static PyObject*
 next(TicTacToe* self, PyObject* args, PyObject* kwds)
 {
-    int result;
-    Check(&result, self);
-    FASTRETURN(result)
-    static char* kwlist[] = { (char*)CLASS_NEXT_FIRSTARG,(char*)CLASS_NEXT_SECONDARG, NULL };
-    int f = -1, s = -1;
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|ii", kwlist,&f, &s)) {
+    if (Check(self) + 1) {
+        PyErr_SetString(PyExc_Exception, EXP_FINAL_NEXT);
+        return NULL;
+    }
+    static char* kwlist[] = { (char*)CLASS_NEXT_POSARG,(char*)CLASS_NEXT_NUMARG, NULL };
+    int pos, num;
+    if (!PyArg_ParseTupleAndKeywords(args, kwds, "ii", kwlist,&pos, &num)) {
         PyErr_SetString(PyExc_TypeError, EXP_ARGS);
         return NULL;
     }
     
-    if ((f < -1) || (s < -1) || (f > 8) || (s > 8)) {
+    if ((pos < 0) || (pos > 8) || (num < 0) || (num > 1)) {
         PyErr_SetString(PyExc_IndexError, EXP_INDEX_OVER);
         return NULL;
     }
-    if ((f == s && f!= -1) || GetState(f) || GetState(s)) {
+    if (GetState(pos)) {
         PyErr_SetString(PyExc_IndexError, EXP_INDEX_USED);
         return NULL;
     }
-    if (f != -1) {
-        SetState(f, 0x1);
-        Check(&result, self);
-        FASTRETURN(result)
-    }
-    if (s != -1) {
-        SetState(s, 0x2);
-        Check(&result, self);
-    }
-    return Py_BuildValue("i", result);
+    SetState(pos, num + 1);
+    return Py_None;
 }
 //注册模块
 static PyModuleDef tttModule = {
@@ -128,8 +134,9 @@ static PyModuleDef tttModule = {
 //注册方法
 static PyMethodDef tttMethods[] = {
     {CLASS_NEXT_NAME, (PyCFunction)next, METH_VARARGS | METH_KEYWORDS,
-     CLASS_NEXT_DOC
-    },
+     CLASS_NEXT_DOC},
+     {CLASS_CLEAR_NAME, (PyCFunction)tttClear, METH_NOARGS,
+     CLASS_CLEAR_DOC},
     {NULL}  /* Sentinel */
 };
 //注册属性获取器
@@ -138,6 +145,8 @@ static PyGetSetDef tttGetsetters[] = {
      CLASS_STATE_DOC, NULL},
     {CLASS_COUNT_NAME, (getter)tttGetCount, (setter)tttSetCount,
      CLASS_COUNT_DOC, NULL},
+    {CLASS_FINAL_NAME, (getter)tttGetFinal, (setter)tttSetFinal,
+     CLASS_FINAL_DOC, NULL},
     {NULL}  /* Sentinel */
 };
 //注册类
